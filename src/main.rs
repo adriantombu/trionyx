@@ -1,4 +1,5 @@
 mod app;
+mod scrape;
 
 use app::*;
 use leptos::*;
