@@ -5,7 +5,6 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-headless_chrome = { version = "1", features = ["fetch"] }
 js-sys = "0.3"
 leptos = { version = "0.5", features = ["csr"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -14,4 +13,4 @@ wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 wasm-bindgen-futures = "0.4"
 
 [workspace]
-members = ["src-tauri"]
+members = ["src-tauri", "scraping"]
