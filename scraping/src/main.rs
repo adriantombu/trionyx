@@ -1,3 +1,5 @@
+mod html;
+
 use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::performance::Metric;
 use futures::StreamExt;
@@ -9,21 +11,26 @@ use std::time::Duration;
 async fn main() -> Result<(), Box<dyn Error>> {
     // let mut res = scrape("https://blog.otso.fr", false).await?; // 200
     // let mut res = scrape("https://www.google.com/404", false).await?; // 404
-    let mut res = scrape(
-        "https://blog.otso.fr/2024-01-17-passer-zsh-fish-shell.html",
-        false,
-    )
-    .await?; // 308
-    if res.status.is_redirection() {
-        println!("Following redirects for {}", res.url);
+    // let mut res = scrape(
+    //     "https://blog.otso.fr/2024-01-17-passer-zsh-fish-shell.html",
+    //     false,
+    // )
+    // .await?; // 308
+    // if res.status.is_redirection() {
+    //     println!("Following redirects for {}", res.url);
+    //
+    //     res = scrape(
+    //         "https://blog.otso.fr/2024-01-17-passer-zsh-fish-shell.html",
+    //         true,
+    //     )
+    //     .await?;
+    // }
+    // dbg!(res);
 
-        res = scrape(
-            "https://blog.otso.fr/2024-01-17-passer-zsh-fish-shell.html",
-            true,
-        )
-        .await?;
-    }
-    dbg!(res);
+    let res = scrape("https://blog.otso.fr", false).await?; // 200
+
+    // TODO: handle duplicates
+    html::html_elements(&res.content.unwrap());
 
     Ok(())
 }
