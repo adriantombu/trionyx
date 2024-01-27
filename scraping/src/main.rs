@@ -1,46 +1,58 @@
 mod html;
+mod types;
 
+use crate::types::{ScrapedPage, ScrapingPageQueue, ScrapingStatus};
 use chromiumoxide::browser::{Browser, BrowserConfig};
-use chromiumoxide::cdp::browser_protocol::performance::Metric;
 use futures::StreamExt;
-use reqwest::StatusCode;
 use std::error::Error;
+use std::time;
 use std::time::Duration;
+use url::Url;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // let mut res = scrape("https://blog.otso.fr", false).await?; // 200
-    // let mut res = scrape("https://www.google.com/404", false).await?; // 404
-    // let mut res = scrape(
-    //     "https://blog.otso.fr/2024-01-17-passer-zsh-fish-shell.html",
-    //     false,
-    // )
-    // .await?; // 308
-    // if res.status.is_redirection() {
-    //     println!("Following redirects for {}", res.url);
-    //
-    //     res = scrape(
-    //         "https://blog.otso.fr/2024-01-17-passer-zsh-fish-shell.html",
-    //         true,
-    //     )
-    //     .await?;
-    // }
-    // dbg!(res);
+    let start_page = Url::parse("https://blog.otso.fr").unwrap();
+    let host = Url::parse(&format!(
+        "{}://{}",
+        start_page.scheme(),
+        start_page.host_str().unwrap()
+    ))
+    .unwrap();
 
-    let page = "https://blog.otso.fr/2018-04-25-il-est-temps-dabandonner-le-rtfm";
+    let mut pages = ScrapingPageQueue::init(start_page.as_ref());
+    pages.insert(start_page.as_ref(), ScrapingStatus::InQueue);
 
-    let res = scrape(page, false).await?; // 200
-    html::get_elements(page, &res.content.unwrap());
+    while let Some(url) = pages.get_next_queued_url() {
+        println!("Scraping {}", url);
 
-    // TODO: handle duplicates and scrape all others internal pages
+        let mut res = scrape(&url, false).await?;
+        if res.status.is_redirection() {
+            tokio::time::sleep(time::Duration::from_millis(250)).await;
+            println!("Following redirects for {}", res.url);
+            if let Some(p) = pages.get_mut(&res.url) {
+                *p = ScrapingStatus::Completed;
+            }
+
+            res = scrape(&url, true).await?;
+            pages.insert(&res.url, ScrapingStatus::InQueue);
+        }
+
+        let elements = html::get_elements(&url, &res.content.unwrap());
+        pages.insert_many(host.as_str(), elements.links);
+
+        if let Some(p) = pages.get_mut(&res.url) {
+            *p = ScrapingStatus::Completed;
+        }
+        tokio::time::sleep(time::Duration::from_millis(250)).await;
+    }
+
+    dbg!(pages);
 
     Ok(())
 }
 
 // TODO: try to replace later with a lighter alternative (WebDriver, wry, ... ?)
 async fn scrape(url: &str, allow_redirects: bool) -> Result<ScrapedPage, Box<dyn Error>> {
-    println!("Scraping {}", url);
-
     let redirect_policy = match allow_redirects {
         true => reqwest::redirect::Policy::default(),
         false => reqwest::redirect::Policy::none(),
@@ -111,22 +123,4 @@ async fn scrape(url: &str, allow_redirects: bool) -> Result<ScrapedPage, Box<dyn
         content: Some(content),
         metrics: Some(metrics),
     })
-}
-
-#[derive(Debug, Default)]
-struct ScrapedPage {
-    url: String,
-    status: StatusCode,
-    content: Option<String>,
-    metrics: Option<Vec<Metric>>,
-}
-
-impl ScrapedPage {
-    fn error(url: &str, status: StatusCode) -> Self {
-        Self {
-            url: url.to_string(),
-            status,
-            ..Default::default()
-        }
-    }
 }

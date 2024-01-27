@@ -1,8 +1,9 @@
+use crate::types::HtmlElements;
 use scraper::{Html, Selector};
 use std::collections::HashMap;
 use url::Url;
 
-pub fn get_elements(current_url: &str, html: &str) {
+pub fn get_elements(current_url: &str, html: &str) -> HtmlElements {
     let document = Html::parse_document(html);
 
     let title = get_title(&document);
@@ -11,11 +12,13 @@ pub fn get_elements(current_url: &str, html: &str) {
     let scripts = get_all_scripts(current_url, &document);
     let metas = get_all_metas(&document);
 
-    dbg!(title);
-    dbg!(links);
-    dbg!(images);
-    dbg!(scripts);
-    dbg!(metas);
+    HtmlElements {
+        title,
+        links,
+        images,
+        scripts,
+        metas,
+    }
 }
 
 pub fn get_title(document: &Html) -> Option<String> {
