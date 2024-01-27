@@ -11,7 +11,10 @@ use url::Url;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let start_page = Url::parse("https://blog.otso.fr").unwrap();
+    let start_page = Url::parse(
+        "https://blog.otso.fr/2018-07-27-le-https-explique-avec-des-pigeons-voyageurs.html",
+    )
+    .unwrap();
     let host = Url::parse(&format!(
         "{}://{}",
         start_page.scheme(),

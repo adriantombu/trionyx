@@ -77,6 +77,6 @@ pub fn clean_url(current_url: &str, path: &str) -> String {
         let this_page = Url::parse(current_url).unwrap();
         this_page.join(path).unwrap().to_string()
     } else {
-        path.to_string()
+        Url::parse(path).unwrap().to_string()
     }
 }
