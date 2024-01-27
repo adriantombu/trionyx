@@ -27,10 +27,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // }
     // dbg!(res);
 
-    let res = scrape("https://blog.otso.fr", false).await?; // 200
+    let page = "https://blog.otso.fr/2018-04-25-il-est-temps-dabandonner-le-rtfm";
 
-    // TODO: handle duplicates
-    html::html_elements(&res.content.unwrap());
+    let res = scrape(page, false).await?; // 200
+    html::get_elements(page, &res.content.unwrap());
+
+    // TODO: handle duplicates and scrape all others internal pages
 
     Ok(())
 }
@@ -62,9 +64,9 @@ async fn scrape(url: &str, allow_redirects: bool) -> Result<ScrapedPage, Box<dyn
     }
 
     let config = BrowserConfig::builder()
+        .arg("--headless=new")
         .disable_cache()
         .incognito()
-        // .with_head()
         .respect_https_errors()
         .window_size(1920, 1080)
         .viewport(None)
@@ -81,6 +83,20 @@ async fn scrape(url: &str, allow_redirects: bool) -> Result<ScrapedPage, Box<dyn
 
     let page = browser.new_page(url).await?;
     page.wait_for_navigation_response().await?;
+    page.evaluate(
+        r#"() =>
+            new Promise((resolve) => {
+              if (document.readyState === 'complete') {
+                resolve('completed-no-event')
+              } else {
+                addEventListener('load', () => {
+                  resolve('complete-event')
+                })
+              }
+            })
+        "#,
+    )
+    .await?;
 
     let content = page.content().await?;
     let metrics = page.metrics().await?;
